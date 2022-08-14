@@ -91,7 +91,7 @@ namespace Avalonia.Controls
             return false;
         }
         
-        /// <inheritdoc cref="IResourceHost.TryGetResource" />
+        /// <inheritdoc cref="IResourceNode.TryGetResource" />
         public static bool TryGetResource(this IResourceHost control, object key, out object? value)
         {
             control = control ?? throw new ArgumentNullException(nameof(control));

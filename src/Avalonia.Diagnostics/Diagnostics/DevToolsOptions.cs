@@ -1,5 +1,6 @@
 ﻿using System;
 using Avalonia.Input;
+using Avalonia.Styling;
 
 namespace Avalonia.Diagnostics
 {

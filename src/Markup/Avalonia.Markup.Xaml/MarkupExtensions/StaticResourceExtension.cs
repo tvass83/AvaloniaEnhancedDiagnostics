@@ -45,7 +45,6 @@ namespace Avalonia.Markup.Xaml.MarkupExtensions
             }
 
             var previousWasControlTheme = false;
-            var firstParentVisited = false;
 
             // Look upwards though the ambient context for IResourceNodes
             // which might be able to give us the resource.
@@ -56,22 +55,24 @@ namespace Avalonia.Markup.Xaml.MarkupExtensions
                     return ColorToBrushConverter.Convert(value, targetType);
                 }
                 
-                // To get a fallback theme variant, check if static resource was invoked inside of the ResourceDictionary.ThemeDictionaries. 
-                if (themeVariant is null && firstParentVisited && containingDictionary is not null)
+                // To get a fallback theme variant, check if static resource was invoked inside of the ResourceDictionary.ThemeDictionaries.
+                if (themeVariant is null)
                 {
-                    if (parent is IResourceDictionary parentDictionary
-                        && parentDictionary.ThemeDictionaries
-                            .FirstOrDefault(p => p.Value == containingDictionary).Key is { } key)
+                    if (containingDictionary is not null)
                     {
-                        themeVariant = key;
+                        if (parent is ResourceDictionary parentDictionary
+                            && parentDictionary.ThemeDictionaries
+                                .FirstOrDefault(p => p.Value == containingDictionary).Key is { } key)
+                        {
+                            themeVariant = key;
+                        }
+
+                        containingDictionary = null;
                     }
-                    containingDictionary = null;
-                }
-                
-                if (!firstParentVisited)
-                {
-                    firstParentVisited = true;
-                    containingDictionary = parent as IResourceDictionary;
+                    else
+                    {
+                        containingDictionary = parent as ResourceDictionary;
+                    }
                 }
 
                 // HACK: Temporary fix for #8678. Hard-coded to only work for the DevTools main
