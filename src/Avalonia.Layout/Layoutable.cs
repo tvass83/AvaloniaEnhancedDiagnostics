@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using Avalonia.Logging;
 using Avalonia.VisualTree;
 
@@ -63,6 +65,36 @@ namespace Avalonia.Layout
     /// </summary>
     public class Layoutable : Visual, ILayoutable
     {
+        protected override void TraceAllX(ParsedEventType eventType, string tag = null)
+        {
+            if (_trackedLayoutables.Contains(this))
+            {
+                var obj = new ParsedObject();
+                obj.Id = this.GetHashCode();
+                obj.Type = this.GetType().ToString();
+                obj.EventType = eventType;
+                obj.TimeStamp = DateTime.Now;
+                obj.Tag = tag;
+                obj.Attributes = new Dictionary<string, string>()
+                {
+                    { "IsMeasureValid", this.IsMeasureValid.ToString() },
+                    { "PreviousMeasure", this._previousMeasure.ToString() },
+                    { "IsArrangeValid", this.IsArrangeValid.ToString() },
+                    { "PreviousArrange", this._previousArrange.ToString() },
+                    { "DesiredSize", this.DesiredSize.ToString() },
+                    { "Bounds", this.Bounds.ToString() },
+                    { "IsVisible", this.IsVisible.ToString() },
+                    { "IsEffectivelyVisible", this.IsEffectivelyVisible.ToString() },
+                    { "IsAttachedToVisualTree", ((IVisual)this).IsAttachedToVisualTree.ToString() },
+                    { "VisualParent", this.GetVisualParent()?.ToString() },
+                    { "VisualParentId", this.GetVisualParent()?.GetHashCode().ToString() },
+                    { "ThreadId", Environment.CurrentManagedThreadId.ToString() },
+                };
+
+                _trackedObjects.Add(obj);
+            }
+        }
+
         /// <summary>
         /// Defines the <see cref="DesiredSize"/> property.
         /// </summary>
@@ -134,6 +166,10 @@ namespace Avalonia.Layout
         private Rect? _previousArrange;
         private EventHandler<EffectiveViewportChangedEventArgs>? _effectiveViewportChanged;
         private EventHandler? _layoutUpdated;
+
+        private bool _isArrangeValid;
+        private bool _isMeasureValid;
+        private Size _desiredSize;
 
         /// <summary>
         /// Initializes static members of the <see cref="Layoutable"/> class.
@@ -291,8 +327,17 @@ namespace Avalonia.Layout
         /// </summary>
         public Size DesiredSize
         {
-            get;
-            private set;
+            get => _desiredSize;
+            set
+            {
+                if (_trackedLayoutables.Contains(this))
+                {
+                    Debug.WriteLine($"Layoutable.DesiredSize was called for {this} ({this.GetHashCode()})");
+                }
+
+                _desiredSize = value;
+                TraceAllX(ParsedEventType.DesiredSize_set);
+            }
         }
 
         /// <summary>
@@ -300,8 +345,17 @@ namespace Avalonia.Layout
         /// </summary>
         public bool IsMeasureValid
         {
-            get;
-            private set;
+            get => _isMeasureValid;
+            set
+            {
+                if (_trackedLayoutables.Contains(this))
+                {
+                    Debug.WriteLine($"Layoutable.IsMeasureValid was called for {this} ({this.GetHashCode()})");
+                }
+
+                _isMeasureValid = value;
+                TraceAllX(ParsedEventType.IsMeasureValid_set);
+            }
         }
 
         /// <summary>
@@ -309,8 +363,17 @@ namespace Avalonia.Layout
         /// </summary>
         public bool IsArrangeValid
         {
-            get;
-            private set;
+            get => _isArrangeValid;
+            set
+            {
+                if (_trackedLayoutables.Contains(this))
+                {
+                    Debug.WriteLine($"Layoutable.IsArrangeValid was called for {this} ({this.GetHashCode()})");
+                }
+
+                _isArrangeValid = value;
+                TraceAllX(ParsedEventType.IsArrangeValid_set);
+            }
         }
 
         /// <summary>
@@ -351,8 +414,26 @@ namespace Avalonia.Layout
                 throw new InvalidOperationException("Cannot call Measure using a size with NaN values.");
             }
 
+            TraceAllX(ParsedEventType.Measuring, $"availableSize: {availableSize}");
+
+            if (_trackedLayoutables.Contains(this))
+            {
+                Debug.WriteLine($"Layoutable.Measure was called for {this} ({this.GetHashCode()})");
+            }
+
             if (!IsMeasureValid || _previousMeasure != availableSize)
             {
+                if (!IsMeasureValid)
+                {
+                    TraceAllX(ParsedEventType.Measuring, "Measure not valid");
+                }
+                else
+                {
+                    TraceAllX(ParsedEventType.Measuring, "_previousMeasure != availableSize");
+                }
+
+                TraceAllX(ParsedEventType.Measuring);
+
                 var previousDesiredSize = DesiredSize;
                 var desiredSize = default(Size);
 
@@ -396,13 +477,32 @@ namespace Avalonia.Layout
                 throw new InvalidOperationException("Invalid Arrange rectangle.");
             }
 
+            TraceAllX(ParsedEventType.Arranging, $"finalRect: {rect}");
+
+            if (_trackedLayoutables.Contains(this))
+            {
+                Debug.WriteLine($"Layoutable.Arrange was called for {this} ({this.GetHashCode()})");
+            }
+
             if (!IsMeasureValid)
             {
+                TraceAllX(ParsedEventType.Arranging, "Measure within Arrange");
                 Measure(_previousMeasure ?? rect.Size);
             }
 
             if (!IsArrangeValid || _previousArrange != rect)
             {
+                if (!IsArrangeValid)
+                {
+                    TraceAllX(ParsedEventType.Arranging, "Arrange not valid");
+                }
+                else
+                {
+                    TraceAllX(ParsedEventType.Arranging, "_previousArrange != finalRect");
+                }
+
+                TraceAllX(ParsedEventType.Arranging);
+
                 Logger.TryGet(LogEventLevel.Verbose, LogArea.Layout)?.Log(this, "Arrange to {Rect} ", rect);
 
                 IsArrangeValid = true;
@@ -418,6 +518,12 @@ namespace Avalonia.Layout
         {
             if (IsMeasureValid)
             {
+                if (_trackedLayoutables.Contains(this))
+                {
+                    Debug.WriteLine($"Layoutable.InvalidateMeasure was called for {this} ({this.GetHashCode()})");
+                }
+
+                TraceAllX(ParsedEventType.InvalidateMeasure);
                 Logger.TryGet(LogEventLevel.Verbose, LogArea.Layout)?.Log(this, "Invalidated measure");
 
                 IsMeasureValid = false;
@@ -439,6 +545,12 @@ namespace Avalonia.Layout
         {
             if (IsArrangeValid)
             {
+                if (_trackedLayoutables.Contains(this))
+                {
+                    Debug.WriteLine($"Layoutable.InvalidateArrange was called for {this} ({this.GetHashCode()})");
+                }
+
+                TraceAllX(ParsedEventType.InvalidateArrange);
                 Logger.TryGet(LogEventLevel.Verbose, LogArea.Layout)?.Log(this, "Invalidated arrange");
 
                 IsArrangeValid = false;
@@ -450,8 +562,14 @@ namespace Avalonia.Layout
         /// <inheritdoc/>
         void ILayoutable.ChildDesiredSizeChanged(ILayoutable control)
         {
+            if (_trackedLayoutables.Contains(this))
+            {
+                Debug.WriteLine($"Layoutable.ChildDesiredSizeChanged was called for {this} ({this.GetHashCode()})");
+            }
+
             if (!_measuring)
             {
+                TraceAllX(ParsedEventType.ChildDesiredSizeChanged);
                 InvalidateMeasure();
             }
         }
@@ -546,6 +664,11 @@ namespace Avalonia.Layout
         /// </remarks>
         protected virtual Size MeasureCore(Size availableSize)
         {
+            if (_trackedLayoutables.Contains(this))
+            {
+                Debug.WriteLine($"Layoutable.MeasureCore was called for {this} ({this.GetHashCode()})");
+            }
+
             if (IsVisible)
             {
                 var margin = Margin;
@@ -641,6 +764,11 @@ namespace Avalonia.Layout
         /// </remarks>
         protected virtual void ArrangeCore(Rect finalRect)
         {
+            if (_trackedLayoutables.Contains(this))
+            {
+                Debug.WriteLine($"Layoutable.ArrangeCore was called for {this} ({this.GetHashCode()})");
+            }
+
             if (IsVisible)
             {
                 var margin = Margin;
