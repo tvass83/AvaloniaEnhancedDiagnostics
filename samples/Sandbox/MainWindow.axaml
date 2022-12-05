@@ -1,4 +1,9 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'
         x:Class="Sandbox.MainWindow">
+  <StackPanel>
+    <TextBox Width="200" Height="50" x:Name="ssd"></TextBox>
+    <Button Content="eee"/>
+  </StackPanel>
+  
 </Window>

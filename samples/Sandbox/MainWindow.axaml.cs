@@ -17,6 +17,12 @@ namespace Sandbox
         private void InitializeComponent()
         {
             AvaloniaXamlLoader.Load(this);
+            this.FindControl<TextBox>("ssd").KeyDown += MainWindow_KeyDown;
+        }
+
+        private void MainWindow_KeyDown(object sender, Avalonia.Input.KeyEventArgs e)
+        {
+            (sender as TextBox).IsEnabled= false;
         }
     }
 }
