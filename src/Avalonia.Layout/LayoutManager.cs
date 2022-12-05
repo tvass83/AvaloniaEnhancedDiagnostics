@@ -36,6 +36,11 @@ namespace Avalonia.Layout
         /// <inheritdoc/>
         public virtual void InvalidateMeasure(ILayoutable control)
         {
+            if (Visual._trackedLayoutables.Contains(control as Visual))
+            {
+                Debug.WriteLine($"LayoutManager.InvalidateMeasure was called for {control} ({control.GetHashCode()})");
+            }
+
             control = control ?? throw new ArgumentNullException(nameof(control));
             Dispatcher.UIThread.VerifyAccess();
 
@@ -67,6 +72,11 @@ namespace Avalonia.Layout
         /// <inheritdoc/>
         public virtual void InvalidateArrange(ILayoutable control)
         {
+            if (Visual._trackedLayoutables.Contains(control as Visual))
+            {
+                Debug.WriteLine($"LayoutManager.InvalidateArrange was called for {control} ({control.GetHashCode()})");
+            }
+
             control = control ?? throw new ArgumentNullException(nameof(control));
             Dispatcher.UIThread.VerifyAccess();
 

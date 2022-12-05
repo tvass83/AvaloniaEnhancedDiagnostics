@@ -1,6 +1,9 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
+using System.IO;
 using Avalonia.Collections;
 using Avalonia.Data;
 using Avalonia.Logging;
@@ -10,6 +13,7 @@ using Avalonia.Metadata;
 using Avalonia.Rendering;
 using Avalonia.Utilities;
 using Avalonia.VisualTree;
+using Newtonsoft.Json;
 
 #nullable enable
 
@@ -27,6 +31,32 @@ namespace Avalonia
     [UsableDuringInitialization]
     public class Visual : StyledElement, IVisual
     {
+        public static HashSet<Visual> _trackedLayoutables = new HashSet<Visual>();
+        public static List<ParsedObject> _trackedObjects = new List<ParsedObject>();
+
+        public static void TrackVisual(Visual visual)
+        {
+            _trackedLayoutables.Add(visual);
+        }
+
+        public static void UnTrackVisual(Visual visual)
+        {
+            _trackedLayoutables.Remove(visual);
+        }
+
+        protected virtual void TraceAllX(ParsedEventType eventType, string tag = null)
+        {
+
+        }
+
+        public static void SerializeTrackedObjects()
+        {
+            string tempFile = Path.GetTempFileName();
+            File.WriteAllText(tempFile, JsonConvert.SerializeObject(_trackedObjects));
+
+            Debug.WriteLine($"*** Details on tracked visuals were written to: {tempFile} ***");
+        }
+
         /// <summary>
         /// Defines the <see cref="Bounds"/> property.
         /// </summary>
@@ -143,7 +173,16 @@ namespace Avalonia
         public Rect Bounds
         {
             get { return _bounds; }
-            protected set { SetAndRaise(BoundsProperty, ref _bounds, value); }
+            protected set
+            {
+                if (_trackedLayoutables.Contains(this))
+                {
+                    Debug.WriteLine($"Visual.Bounds was called for {this} ({this.GetHashCode()})");
+                }
+
+                SetAndRaise(BoundsProperty, ref _bounds, value);
+                TraceAllX(ParsedEventType.Bounds_set);
+            }
         }
 
         /// <summary>
