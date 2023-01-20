@@ -335,6 +335,11 @@ namespace Avalonia
         /// </summary>
         public void InvalidateVisual()
         {
+            if (_trackedLayoutables.Contains(this))
+            {
+                Debug.WriteLine($"InvalidateVisual was called for {this} ({this.GetHashCode()})");
+            }
+
             VisualRoot?.Renderer?.AddDirty(this);
         }
 
