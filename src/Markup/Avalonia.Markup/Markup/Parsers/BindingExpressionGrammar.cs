@@ -326,12 +326,12 @@ namespace Avalonia.Markup.Parsers
 
             if (!r.End && r.TakeIf(':'))
             {
-                ns = typeNameOrNamespace;
-                typeName = r.ParseIdentifier();
+                ns = typeNameOrNamespace.ToString().AsSpan();
+                typeName = r.ParseIdentifier().ToString().AsSpan();
             }
             else
             {
-                typeName = typeNameOrNamespace;
+                typeName = typeNameOrNamespace.ToString().AsSpan();
             }
 
             return new TypeName(ns, typeName);
