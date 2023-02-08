@@ -344,16 +344,16 @@ namespace Avalonia.Markup.Parsers
 
             if (!r.End && r.TakeIf('|'))
             {
-                ns = namespaceOrTypeName;
+                ns = namespaceOrTypeName.ToString().AsSpan();
                 if (r.End)
                 {
                     throw new ExpressionParseException(r.Position, $"Unexpected end of selector.");
                 }
-                type = r.ParseIdentifier();
+                type = r.ParseIdentifier().ToString().AsSpan();
             }
             else
             {
-                type = namespaceOrTypeName;
+                type = namespaceOrTypeName.ToString().AsSpan();
             }
 
             syntax.Xmlns = ns.ToString();
